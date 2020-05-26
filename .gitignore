@@ -5,3 +5,5 @@ geckodriver.log
 *.exe
 *.txt
 *.in
+
+!requirements.txt
