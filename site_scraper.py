@@ -1,12 +1,13 @@
+import datetime
 import os.path
 import subprocess
 
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
+
 
 driver = webdriver.Firefox()
 
-URL = 'https://www.sudoku.com/expert/'
+URL = 'https://www.sudoku.com/medium/'
 driver.get(URL)
 
 numbers = [
@@ -50,56 +51,88 @@ numbers = [
     "3.302-7.403 7.63 0 4.285 3.035 7.444 7.383 7.444z"
 ]
 
+
+# get the cookie agreement close icon
 cookie = driver.find_element_by_class_name('banner-close')
 cookie.click()
 
+# Get all the cells of the puzzle
 cells = driver.find_elements_by_class_name('game-cell')
 empty_cells = []
 
-numpad_nums = driver.find_elements_by_class_name('numpad-item')
-
+# get the pause button
 pause = driver.find_element_by_class_name('icon-pause')
 pause.click()
 
+# get the play button
 resume = driver.find_element_by_class_name('icon-play')
 
-# Scrape the website and generate space-separated grid sudoku
-with open('sudoku.in', 'w') as f:
-    f.write('9\n')
-    counter = 1
-    for c in cells:
-        if c.find_element_by_tag_name('div').text == ' ':
-            f.write("0 ")
-            empty_cells.append(c)
-        else:
-            f.write(str(numbers.index(c.find_element_by_tag_name('path').get_attribute('d')) + 1) + ' ')
-        if counter % 9 == 0:
-            f.write('\n')
+# get the numbers for answer entry
+numpad_nums = driver.find_elements_by_class_name('numpad-item')
 
-        counter += 1
 
-f_result = open('results.txt', 'w')
+def create_grid():
+    """
+    Uses the cell elements to create a sudoku puzzle separated by whitespace in sudoku.in
 
-if not os.path.exists('sudoku.exe'):
-    subprocess.run(['g++', '-Wall', '-Werror', '-pedantic', '-g', '--std=c++11', 'sudoku.cpp', '-o', 'sudoku.exe'])
+    :return: Nothing
+    """
+    # Scrape the website and generate space-separated grid sudoku
+    with open('sudoku.in', 'w') as f:
+        f.write('9\n')
+        counter = 1
+        for c in cells:
+            if c.find_element_by_tag_name('div').text == ' ':
+                f.write("0 ")
+                empty_cells.append(c)
+            else:
+                f.write(str(numbers.index(c.find_element_by_tag_name('path').get_attribute('d')) + 1) + ' ')
+            if counter % 9 == 0:
+                f.write('\n')
 
-if os.path.exists('sudoku.exe'):
-    subprocess.run(['./sudoku.exe', 'sudoku.in'], stdout=f_result)
-else:
-    print('error: sudoku.exe does not exists')
+            counter += 1
 
-f_result.close()
 
-results = []
+def solve_puzzle():
+    """
+    Compiles sudoku.cpp if not already compiled. Then runs the program and generates results.txt
 
-with open('results.txt', 'r') as f_result:
-    results = [int(x) for x in f_result.readline().split()]
-    print(results)
+    :return: Nothing
+    """
+    f_result = open('results.txt', 'w')
 
-resume.click()
-for i in range(len(results)):
-    ans = results[i]
-    c = empty_cells[i]
+    if not os.path.exists('sudoku.exe'):
+        subprocess.run(['g++', '-Wall', '-Werror', '-pedantic', '-g', '--std=c++11', 'sudoku.cpp', '-o', 'sudoku.exe'])
 
-    c.click()
-    numpad_nums[ans - 1].click()
+    if os.path.exists('sudoku.exe'):
+        subprocess.run(['./sudoku.exe', 'sudoku.in'], stdout=f_result)
+    else:
+        print('error: sudoku.exe does not exists')
+
+    f_result.close()
+
+
+def enter_results():
+    """
+    Uses first line of results.txt to fill the blanks of the puzzle
+
+    :return: Nothing
+    """
+
+    with open('results.txt', 'r') as f_result:
+        results = [int(x) for x in f_result.readline().split()]
+
+    resume.click()
+    for i in range(len(results)):
+        begin = datetime.datetime.now()
+        ans = results[i]
+        c = empty_cells[i]
+
+        c.click()
+        numpad_nums[ans - 1].click()
+        end = datetime.datetime.now()
+        print('entry time:', end - begin)
+
+
+input()
+driver.quit()
