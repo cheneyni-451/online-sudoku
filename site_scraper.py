@@ -1,11 +1,12 @@
-import datetime
 import os.path
 import subprocess
+import time
 
 from selenium import webdriver
+from selenium.common import exceptions
 
 
-driver = webdriver.Firefox()
+driver = webdriver.Chrome()
 
 URL = 'https://www.sudoku.com/medium/'
 driver.get(URL)
@@ -51,14 +52,14 @@ numbers = [
     "3.302-7.403 7.63 0 4.285 3.035 7.444 7.383 7.444z"
 ]
 
+# wait for page to load
+time.sleep(5)
 
 # get the cookie agreement close icon
 cookie = driver.find_element_by_class_name('banner-close')
 cookie.click()
 
-# Get all the cells of the puzzle
-cells = driver.find_elements_by_class_name('game-cell')
-empty_cells = []
+driver.implicitly_wait(10)
 
 # get the pause button
 pause = driver.find_element_by_class_name('icon-pause')
@@ -66,6 +67,13 @@ pause.click()
 
 # get the play button
 resume = driver.find_element_by_class_name('icon-play')
+
+# Get the sudoku grid
+grid = driver.find_element_by_class_name('game-table')
+
+# Get all the cells of the puzzle
+cells = grid.find_elements_by_class_name('game-cell')
+empty_cells = []
 
 # get the numbers for answer entry
 numpad_nums = driver.find_elements_by_class_name('numpad-item')
@@ -124,15 +132,25 @@ def enter_results():
 
     resume.click()
     for i in range(len(results)):
-        begin = datetime.datetime.now()
         ans = results[i]
         c = empty_cells[i]
 
         c.click()
-        numpad_nums[ans - 1].click()
-        end = datetime.datetime.now()
-        print('entry time:', end - begin)
+        try:
+            numpad_nums[ans - 1].click()
+        except exceptions.ElementClickInterceptedException:
+            ad_close_btn = driver.find_element_by_class_name('sr-blade-close-button')
+            ad_close_btn.click()
+            numpad_nums[ans - 1].click()
 
 
-input()
-driver.quit()
+def main():
+    create_grid()
+    solve_puzzle()
+    enter_results()
+    input()
+    driver.quit()
+
+
+if __name__ == '__main__':
+    main()
